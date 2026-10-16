@@ -220,6 +220,7 @@
 .week .day.today { border-color: var(--accent); }
 .week .day.done .tag { color: var(--ok); }
 .week .day.rest .tag { color: var(--fg-faint); font-weight: 500; }
+.week .day.missed .tag { color: var(--fg-muted); font-weight: 500; }
 
 /* Calendar */
 .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }

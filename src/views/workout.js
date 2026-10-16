@@ -4,7 +4,7 @@ import { pickExercise } from '../ui/exercisePicker.js';
 import { startRestTimer, stopRestTimer } from '../ui/resttimer.js';
 import { keepAwake } from '../ui/timer.js';
 import * as repo from '../db/repo.js';
-import { bestsFromWorkouts, classifySet } from '../domain/prs.js';
+import { bestsFromWorkouts, classifySet, e1rm } from '../domain/prs.js';
 import { suggestWeight, incrementFor } from '../domain/progression.js';
 import { findLastEntry, sortDesc, finishWorkout } from '../domain/session.js';
 import { fmtWeight, toDisplayWeight, fromDisplayWeight, fmtDuration, roundToStep } from '../domain/units.js';
@@ -30,6 +30,24 @@ export async function render(container, ctx) {
   const prior = allWorkouts.filter((w) => w.id !== workout.id && w.status === 'done' && (w.date < workout.date || (w.date === workout.date && (w.startedAt || '') < (workout.startedAt || ''))));
   const bestsCache = new Map();
   const bests = (exId) => { if (!bestsCache.has(exId)) bestsCache.set(exId, bestsFromWorkouts(prior, exId)); return bestsCache.get(exId); };
+  // Bests from prior workouts plus the done sets logged earlier in this workout, so a second
+  // set at the same weight is not flagged as a PR during the session.
+  function liveBests(entry, setIndex) {
+    const base = bests(entry.exerciseId);
+    const b = { bestE1rm: base.bestE1rm, bestWeight: base.bestWeight, bestAtReps: new Map(base.bestAtReps) };
+    for (const e of workout.entries) {
+      if (e.exerciseId !== entry.exerciseId) continue;
+      const upTo = e === entry ? setIndex : (workout.entries.indexOf(e) < workout.entries.indexOf(entry) ? e.sets.length : 0);
+      for (let k = 0; k < upTo; k++) {
+        const s = e.sets[k];
+        if (!s?.done || !s.reps || s.weightLb == null) continue;
+        b.bestE1rm = Math.max(b.bestE1rm, e1rm(s.weightLb, s.reps));
+        b.bestWeight = Math.max(b.bestWeight, s.weightLb);
+        for (let r = 1; r <= s.reps; r++) if (s.weightLb > (b.bestAtReps.get(r) || 0)) b.bestAtReps.set(r, s.weightLb);
+      }
+    }
+    return b;
+  }
   const editing = workout.status === 'done';
   const inc = (exId) => incrementFor(exById.get(exId), profile.settings);
 
@@ -161,7 +179,7 @@ export async function render(container, ctx) {
       drawEntries();
     }
     function updateBadge() {
-      const pr = classifySet(set, bests(entry.exerciseId));
+      const pr = classifySet(set, liveBests(entry, i));
       set.pr = set.done ? pr : null;
       badge.style.display = pr && set.done ? 'inline-flex' : 'none';
     }

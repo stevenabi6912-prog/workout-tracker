@@ -38,7 +38,10 @@ export function lineChart({ series, goal = null, width = 360, height = 180, fmtY
   const ys = pts.map((p) => p.y).concat(goal != null ? [goal] : []);
   let xMin = Math.min(...xs), xMax = Math.max(...xs);
   if (xMax === xMin) { xMin -= 86400000; xMax += 86400000; }
-  const { ticks, min: y0, max: y1 } = niceTicks(yMin != null ? Math.min(yMin, ...ys) : Math.min(...ys), Math.max(...ys));
+  let lo = yMin != null ? Math.min(yMin, ...ys) : Math.min(...ys);
+  let hi = Math.max(...ys);
+  if (hi - lo < Math.max(1, Math.abs(hi) * 0.02)) { const pad = Math.max(2, Math.abs(hi) * 0.05); lo -= pad; hi += pad; }
+  const { ticks, min: y0, max: y1 } = niceTicks(lo, hi);
   const X = (x) => pad.l + ((x - xMin) / (xMax - xMin)) * w;
   const Y = (y) => pad.t + hgt - ((y - y0) / (y1 - y0)) * hgt;
 
@@ -81,7 +84,8 @@ export function barChart({ bars, width = 360, height = 160, fmtY = (v) => v, max
   bars.forEach((b, i) => {
     const x = pad.l + i * slot + (slot - bw) / 2;
     if (b.value) svg.append(el('rect', { x, y: Y(b.value), width: bw, height: Y(0) - Y(b.value), rx: 2, class: 'bar' }));
-    if (i % every === 0 || i === n - 1) svg.append(el('text', { x: x + bw / 2, y: height - 6, 'text-anchor': 'middle', class: 'tick' }, b.label));
+    const lastLabeled = Math.floor((n - 1) / every) * every;
+    if (i % every === 0 || (i === n - 1 && i - lastLabeled >= Math.max(2, every / 2))) svg.append(el('text', { x: x + bw / 2, y: height - 6, 'text-anchor': 'middle', class: 'tick' }, b.label));
   });
   return svg;
 }

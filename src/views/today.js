@@ -61,7 +61,7 @@ export async function render(container, ctx) {
     // Start anything
     container.append(
       h('div.stack', { style: { marginTop: '16px' } },
-        h('button.btn.block', { onclick: startAny }, 'Start any workout'),
+        h('button.btn.block', { onclick: () => startAny() }, 'Start any workout'),
         h('button.btn.block', { onclick: () => navigate('/cardio?date=' + t) }, 'Log cardio'),
       ),
     );
@@ -102,7 +102,7 @@ export async function render(container, ctx) {
         h('div.small.muted', summaryLine(row.workout)),
         h('div.row', { style: { marginTop: '10px' } },
           h('button.btn.grow', { onclick: () => navigate(`/workout/${row.workout.id}`) }, 'View'),
-          h('button.btn.grow', { onclick: startAny }, 'Start another'),
+          h('button.btn.grow', { onclick: () => startAny() }, 'Start another'),
         ),
       );
       return;
@@ -185,14 +185,14 @@ export async function render(container, ctx) {
     }
   }
 
-  async function startAny() {
+  async function startAny(date = today()) {
     const items = [];
     for (const r of routines) for (const d of r.days) items.push({ label: d.label, sub: `${r.name} · ${d.slots.length} exercises`, value: { r, d } });
     items.push({ label: 'Empty workout', sub: 'Add exercises as you go', value: 'blank' });
-    const v = await pick(items, { title: 'Start today' });
+    const v = await pick(items, { title: date === today() ? 'Start today' : `Log for ${relativeDay(date)}` });
     if (!v) return;
-    if (v === 'blank') { const w = await startBlankWorkout({ profile }); return navigate(`/workout/${w.id}`); }
-    beginWorkout(v.r, v.d, today());
+    if (v === 'blank') { const w = await startBlankWorkout({ profile, date }); return navigate(`/workout/${w.id}`); }
+    beginWorkout(v.r, v.d, date);
   }
 
   async function beginWorkout(r, rd, date, accepted = null) {
@@ -206,6 +206,10 @@ export async function render(container, ctx) {
   }
 
   await draw();
+  if (ctx.query.start && /^\d{4}-\d{2}-\d{2}$/.test(ctx.query.start)) {
+    history.replaceState(null, '', '#/');
+    startAny(ctx.query.start);
+  }
 }
 
 export function estimateMinutes(rd) {
