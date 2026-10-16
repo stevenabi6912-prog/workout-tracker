@@ -1,0 +1,22 @@
+{
+  "name": "workout-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Phone-first workout tracker PWA: lifting, cardio, body weight, Apple Health import.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/build-sw.js",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "icons": "node scripts/make-icons.js"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.6",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}
